@@ -582,7 +582,7 @@
   // ============================================================
   // 設定：請將這裡換成你的 Apps Script Web App URL
   // ============================================================
-  const API_URL = 'https://script.google.com/macros/s/AKfycbytljYrKKvBdT7kr71fveSIsmzpaWY-_EP-MVLNt5hJ_JSVFlGl4YiO1-038FIJHUG0Dw/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxXD9h_uNljgADmb4xCrAbaII6vVUY6mOyNxHJPQyGZuQ2KdGVpDB7d_fB2ej0vQPZ_dw/exec';
 
   // ============================================================
   // State
@@ -606,12 +606,62 @@
   });
 
   // ============================================================
-  // API Calls
+  // API Calls (使用 iframe + form POST 繞過 CORS)
   // ============================================================
+
+  /**
+   * 透過隱藏 iframe 發送 GET 請求到 Apps Script
+   * Google Apps Script 的 doGet 會 302 redirect，
+   * 但 script tag / iframe 不受 CORS 限制。
+   * 這裡用 Google Apps Script 的 callback 包裝來解決。
+   */
+  function callAPI(params) {
+    return new Promise(function(resolve, reject) {
+      // 建立唯一的 callback 名稱
+      const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+
+      // 設定全域 callback
+      window[callbackName] = function(result) {
+        // 清理
+        delete window[callbackName];
+        const script = document.getElementById(callbackName);
+        if (script) script.remove();
+        resolve(result);
+      };
+
+      // 設定逾時
+      const timeout = setTimeout(function() {
+        if (window[callbackName]) {
+          delete window[callbackName];
+          const script = document.getElementById(callbackName);
+          if (script) script.remove();
+          reject(new Error('請求逾時'));
+        }
+      }, 30000);
+
+      // 組合 URL
+      const url = API_URL + '?callback=' + callbackName +
+        '&' + Object.keys(params).map(function(k) {
+          return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+        }).join('&');
+
+      // 建立 script tag
+      const script = document.createElement('script');
+      script.id = callbackName;
+      script.src = url;
+      script.onerror = function() {
+        clearTimeout(timeout);
+        delete window[callbackName];
+        script.remove();
+        reject(new Error('連線失敗'));
+      };
+      document.body.appendChild(script);
+    });
+  }
+
   async function loadMenu() {
     try {
-      const response = await fetch(API_URL + '?action=getMenu');
-      const result = await response.json();
+      const result = await callAPI({ action: 'getMenu' });
 
       if (!result.success) {
         showScreen('screenClosed');
@@ -676,19 +726,15 @@
     document.getElementById('orderFooter').style.display = 'none';
 
     try {
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: 'submitOrder',
+      const result = await callAPI({
+        action: 'submitOrder',
+        data: JSON.stringify({
           customerName: name,
           customerPhone: phone.replace(/\s/g, ''),
           items: items,
           note: note
         })
       });
-
-      const result = await response.json();
 
       if (result.success) {
         showOrderResult(true, result);
