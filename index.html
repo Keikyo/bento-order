@@ -582,7 +582,7 @@
   // ============================================================
   // 設定：請將這裡換成你的 Apps Script Web App URL
   // ============================================================
-  const API_URL = 'https://script.google.com/macros/s/AKfycbwkR3lqAtIJN-N8lDPNDuQbX8P_3SY39RHJ-78mapXqYR6K_1z8zInDjnGoEG9eqG8fsQ/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbygMyC9si4ypwDJQcz1S4083GhQHJNb2DCtiJl0mEHdfTuY_taTM2LlPJsyiVvWvcSamQ/exec';
 
   // ============================================================
   // State
@@ -623,6 +623,7 @@
       // 設定全域 callback
       window[callbackName] = function(result) {
         // 清理
+        clearTimeout(timeout);
         delete window[callbackName];
         const script = document.getElementById(callbackName);
         if (script) script.remove();
@@ -691,6 +692,9 @@
   }
 
   async function handleSubmit() {
+    // 立即禁用按鈕防止連點
+    document.getElementById('submitBtn').disabled = true;
+
     const name = document.getElementById('customerName').value.trim();
     const phone = document.getElementById('customerPhone').value.trim();
     const note = document.getElementById('orderNote').value.trim();
@@ -698,14 +702,17 @@
     // Validation
     if (!name) {
       showError('請輸入姓名');
+      document.getElementById('submitBtn').disabled = false;
       return;
     }
     if (!phone) {
       showError('請輸入電話');
+      document.getElementById('submitBtn').disabled = false;
       return;
     }
-    if (!/^[0-9\-+]{8,15}$/.test(phone.replace(/\s/g, ''))) {
+    if (!/^[+]?[0-9]{1}[0-9\-]{6,13}[0-9]$/.test(phone.replace(/\s/g, ''))) {
       showError('請輸入有效的電話號碼');
+      document.getElementById('submitBtn').disabled = false;
       return;
     }
 
@@ -718,6 +725,7 @@
 
     if (items.length === 0) {
       showError('請至少選擇一項便當');
+      document.getElementById('submitBtn').disabled = false;
       return;
     }
 
@@ -750,6 +758,13 @@
   // ============================================================
   // Rendering
   // ============================================================
+  // HTML escape 防止 XSS
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   function renderMenu() {
     const container = document.getElementById('menuList');
     container.innerHTML = '';
@@ -777,8 +792,8 @@
 
       div.innerHTML = `
         <div class="menu-item-header">
-          <div class="menu-item-name">${item.name} ${badgeHTML}</div>
-          <div class="menu-item-price">$${item.price}</div>
+          <div class="menu-item-name">${escapeHTML(item.name)} ${badgeHTML}</div>
+          <div class="menu-item-price">$${escapeHTML(String(item.price))}</div>
         </div>
         <div class="menu-item-info">
           <span class="remaining ${isLow ? 'low' : ''}">
@@ -786,9 +801,9 @@
           </span>
           ${isSoldOut ? '' : `
             <div class="qty-selector">
-              <button class="qty-btn" onclick="changeQty('${item.name}', -1)" data-minus="${item.name}">−</button>
+              <button class="qty-btn" onclick="changeQty('${escapeHTML(item.name).replace(/'/g, "\\'")}', -1)" data-minus="${escapeHTML(item.name)}">−</button>
               <span class="qty-value" id="qty-${CSS.escape(item.name)}">${quantities[item.name] || 0}</span>
-              <button class="qty-btn" onclick="changeQty('${item.name}', 1)" data-plus="${item.name}">+</button>
+              <button class="qty-btn" onclick="changeQty('${escapeHTML(item.name).replace(/'/g, "\\'")}', 1)" data-plus="${escapeHTML(item.name)}">+</button>
             </div>
           `}
         </div>
@@ -828,10 +843,12 @@
     }
 
     // Update card style
-    const card = document.querySelector(`.menu-item[data-name="${name}"]`);
-    if (card) {
-      card.classList.toggle('selected', newQty > 0);
-    }
+    const cards = document.querySelectorAll('.menu-item');
+    cards.forEach(function(card) {
+      if (card.getAttribute('data-name') === name) {
+        card.classList.toggle('selected', newQty > 0);
+      }
+    });
 
     updateFooter();
     updateQtyButtons();
@@ -880,7 +897,7 @@
       result.items.forEach(function(item) {
         itemsHTML += `
           <div class="result-detail-row">
-            <span>${item.name} x${item.qty}</span>
+            <span>${escapeHTML(item.name)} x${item.qty}</span>
             <span>$${item.subtotal}</span>
           </div>
         `;
@@ -889,7 +906,7 @@
       container.innerHTML = `
         <div class="result-icon">✅</div>
         <h2>訂單成立！</h2>
-        <div class="order-number">訂單編號：${result.orderNumber}</div>
+        <div class="order-number">訂單編號：${escapeHTML(result.orderNumber)}</div>
         <div class="result-details">
           ${itemsHTML}
           <div class="result-detail-row total">
@@ -906,7 +923,7 @@
       container.innerHTML = `
         <div class="result-icon">❌</div>
         <h2>訂單失敗</h2>
-        <p style="color:var(--text-light); margin-bottom:20px;">${result.message}</p>
+        <p style="color:var(--text-light); margin-bottom:20px;">${escapeHTML(result.message)}</p>
         <button class="submit-btn" onclick="location.reload()" style="display:inline-block;">
           重新訂購
         </button>
