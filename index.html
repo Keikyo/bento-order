@@ -3,576 +3,178 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>便當訂購系統</title>
+  <title>便當訂購</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuid.min.js"></script>
   <style>
-    /* ============================== */
-    /* CSS Variables                   */
-    /* ============================== */
     :root {
       --primary: #E8590C;
-      --primary-light: #FF6B2B;
+      --primary-light: #FFF3ED;
       --primary-dark: #C84A0A;
-      --bg: #FFF8F0;
+      --bg: #FAFAF9;
       --bg-card: #FFFFFF;
-      --bg-sold-out: #F3F4F6;
-      --text: #1F2937;
-      --text-light: #6B7280;
-      --text-muted: #9CA3AF;
-      --border: #E5E7EB;
-      --success: #059669;
-      --success-bg: #ECFDF5;
+      --bg-sold-out: #F5F5F4;
+      --text: #1C1917;
+      --text-light: #78716C;
+      --text-muted: #A8A29E;
+      --border: #E7E5E4;
+      --success: #15803D;
+      --success-bg: #F0FDF4;
       --danger: #DC2626;
       --danger-bg: #FEF2F2;
-      --warning: #F59E0B;
+      --warning: #D97706;
       --warning-bg: #FFFBEB;
-      --limited-badge: #7C3AED;
-      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
-      --radius: 12px;
-      --radius-sm: 8px;
+      --purple: #7C3AED;
+      --purple-bg: #F5F3FF;
+      --waitlist: #2563EB;
+      --waitlist-bg: #EFF6FF;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --radius: 14px;
+      --radius-sm: 10px;
     }
-
-    /* ============================== */
-    /* Reset & Base                    */
-    /* ============================== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    .app { max-width: 480px; margin: 0 auto; padding: 0 16px 120px; }
 
-    body {
-      font-family: 'Noto Sans TC', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
+    /* Header */
+    .header { text-align: center; padding: 20px 0 14px; position: sticky; top: 0; background: var(--bg); z-index: 100; border-bottom: 1px solid var(--border); }
+    .header h1 { font-size: 22px; font-weight: 900; color: var(--primary); }
+    .header .date { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 6px; }
+    .status-badge.open { background: var(--success-bg); color: var(--success); }
+    .status-badge.closed { background: var(--danger-bg); color: var(--danger); }
+    .status-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .status-badge.open .dot { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-    /* ============================== */
-    /* Layout                          */
-    /* ============================== */
-    .app {
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 0 16px 100px;
-    }
+    /* Screens */
+    .screen { display: none; } .screen.active { display: block; }
+    .closed-message { text-align: center; padding: 60px 20px; }
+    .closed-message .icon { font-size: 56px; margin-bottom: 12px; }
+    .closed-message h2 { font-size: 18px; margin-bottom: 6px; }
+    .closed-message p { color: var(--text-light); font-size: 13px; }
 
-    /* ============================== */
-    /* Header                          */
-    /* ============================== */
-    .header {
-      text-align: center;
-      padding: 24px 0 16px;
-      position: sticky;
-      top: 0;
-      background: var(--bg);
-      z-index: 100;
-      border-bottom: 1px solid var(--border);
-    }
+    /* Sections */
+    .section-title { font-size: 14px; font-weight: 700; margin: 18px 0 10px; display: flex; align-items: center; gap: 6px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group { margin-bottom: 10px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text-light); margin-bottom: 3px; }
+    .form-group input, .form-group textarea { width: 100%; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; font-family: 'Noto Sans TC', sans-serif; background: var(--bg-card); transition: border-color 0.2s; -webkit-appearance: none; }
+    .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(232,89,12,0.08); }
+    .form-group textarea { resize: vertical; min-height: 50px; font-size: 14px; }
+    .char-count { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 2px; }
 
-    .header h1 {
-      font-size: 24px;
-      font-weight: 900;
-      color: var(--primary);
-      letter-spacing: -0.5px;
-    }
+    /* Menu Items */
+    .menu-list { display: flex; flex-direction: column; gap: 8px; }
+    .menu-item { background: var(--bg-card); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow-sm); transition: all 0.2s; }
+    .menu-item.selected { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(232,89,12,0.08); }
+    .menu-item.sold-out-item { background: var(--bg-sold-out); border-color: var(--border); }
+    .menu-item.waitlisted { border-color: var(--waitlist); box-shadow: 0 0 0 3px rgba(37,99,235,0.08); }
+    .menu-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .menu-item-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+    .badge.limited { background: var(--purple-bg); color: var(--purple); }
+    .badge.sold-out-badge { background: var(--danger-bg); color: var(--danger); }
+    .badge.waitlist-badge { background: var(--waitlist-bg); color: var(--waitlist); }
+    .menu-item-price { font-size: 17px; font-weight: 900; color: var(--primary); }
+    .menu-item-info { display: flex; justify-content: space-between; align-items: center; }
+    .remaining { font-size: 11px; color: var(--text-light); }
+    .remaining.low { color: var(--danger); font-weight: 700; }
+    .remaining.out { color: var(--waitlist); font-weight: 600; font-size: 11px; }
+    .per-person-limit { font-size: 10px; color: var(--purple); margin-top: 3px; }
 
-    .header .subtitle {
-      font-size: 13px;
-      color: var(--text-light);
-      margin-top: 4px;
-    }
+    /* Qty Selector */
+    .qty-selector { display: flex; align-items: center; background: #F5F5F4; border-radius: 8px; overflow: hidden; }
+    .qty-btn { width: 34px; height: 34px; border: none; background: transparent; font-size: 17px; font-weight: 700; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+    .qty-btn:active { background: #E7E5E4; }
+    .qty-btn:disabled { color: var(--text-muted); }
+    .qty-value { width: 32px; text-align: center; font-size: 15px; font-weight: 700; }
+    .qty-value.has-value { color: var(--primary); }
+    .qty-value.waitlist-value { color: var(--waitlist); }
 
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      margin-top: 8px;
-    }
+    /* Footer */
+    .order-footer { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg-card); border-top: 1px solid var(--border); padding: 10px 16px; padding-bottom: max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 12px rgba(0,0,0,0.06); z-index: 200; }
+    .order-footer-inner { max-width: 480px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .order-summary-text { font-size: 12px; color: var(--text-light); }
+    .order-summary-text .total { font-size: 19px; font-weight: 900; color: var(--text); display: block; }
+    .order-summary-text .waitlist-note { font-size: 10px; color: var(--waitlist); }
+    .submit-btn { padding: 13px 28px; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; font-family: 'Noto Sans TC', sans-serif; cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent; white-space: nowrap; }
+    .submit-btn:active { transform: scale(0.97); background: var(--primary-dark); }
+    .submit-btn:disabled { background: var(--text-muted); cursor: not-allowed; transform: none; }
+    .submit-btn.has-waitlist { background: var(--waitlist); }
 
-    .status-badge.open {
-      background: var(--success-bg);
-      color: var(--success);
-    }
-
-    .status-badge.closed {
-      background: var(--danger-bg);
-      color: var(--danger);
-    }
-
-    .status-badge .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: currentColor;
-      animation: pulse 1.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    /* ============================== */
-    /* Screens                         */
-    /* ============================== */
-    .screen { display: none; }
-    .screen.active { display: block; }
-
-    /* ============================== */
-    /* Closed Message                  */
-    /* ============================== */
-    .closed-message {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    .closed-message .icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-    }
-
-    .closed-message h2 {
-      font-size: 20px;
-      margin-bottom: 8px;
-    }
-
-    .closed-message p {
-      color: var(--text-light);
-      font-size: 14px;
-    }
-
-    /* ============================== */
-    /* Customer Info Form              */
-    /* ============================== */
-    .section-title {
-      font-size: 16px;
-      font-weight: 700;
-      margin: 20px 0 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-title .icon {
-      font-size: 18px;
-    }
-
-    .form-group {
-      margin-bottom: 12px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-light);
-      margin-bottom: 4px;
-    }
-
-    .form-group input,
-    .form-group textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 16px;
-      font-family: 'Noto Sans TC', sans-serif;
-      background: var(--bg-card);
-      transition: border-color 0.2s;
-      -webkit-appearance: none;
-    }
-
-    .form-group input:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(232, 89, 12, 0.1);
-    }
-
-    .form-group textarea {
-      resize: vertical;
-      min-height: 60px;
-    }
-
-    /* ============================== */
-    /* Menu Items                      */
-    /* ============================== */
-    .menu-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .menu-item {
-      background: var(--bg-card);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px;
-      box-shadow: var(--shadow-sm);
-      transition: all 0.2s;
-    }
-
-    .menu-item.selected {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(232, 89, 12, 0.1);
-    }
-
-    .menu-item.sold-out {
-      background: var(--bg-sold-out);
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    .menu-item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 8px;
-    }
-
-    .menu-item-name {
-      font-size: 16px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .badge.limited {
-      background: #EDE9FE;
-      color: var(--limited-badge);
-    }
-
-    .badge.sold-out-badge {
-      background: var(--danger-bg);
-      color: var(--danger);
-    }
-
-    .menu-item-price {
-      font-size: 18px;
-      font-weight: 900;
-      color: var(--primary);
-    }
-
-    .menu-item-info {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .remaining {
-      font-size: 12px;
-      color: var(--text-light);
-    }
-
-    .remaining.low {
-      color: var(--danger);
-      font-weight: 700;
-    }
-
-    /* Quantity Selector */
-    .qty-selector {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      background: #F3F4F6;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .qty-btn {
-      width: 36px;
-      height: 36px;
-      border: none;
-      background: transparent;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--text);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .qty-btn:active {
-      background: #E5E7EB;
-    }
-
-    .qty-btn:disabled {
-      color: var(--text-muted);
-      cursor: not-allowed;
-    }
-
-    .qty-value {
-      width: 36px;
-      text-align: center;
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .qty-value.has-value {
-      color: var(--primary);
-    }
-
-    .per-person-limit {
-      font-size: 11px;
-      color: var(--limited-badge);
-      margin-top: 4px;
-    }
-
-    /* ============================== */
-    /* Order Summary (sticky footer)   */
-    /* ============================== */
-    .order-footer {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: var(--bg-card);
-      border-top: 1px solid var(--border);
-      padding: 12px 16px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
-      z-index: 200;
-    }
-
-    .order-footer-inner {
-      max-width: 480px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .order-summary-text {
-      font-size: 13px;
-      color: var(--text-light);
-    }
-
-    .order-summary-text .total {
-      font-size: 20px;
-      font-weight: 900;
-      color: var(--text);
-      display: block;
-    }
-
-    .submit-btn {
-      padding: 14px 32px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-size: 16px;
-      font-weight: 700;
-      font-family: 'Noto Sans TC', sans-serif;
-      cursor: pointer;
-      transition: all 0.2s;
-      -webkit-tap-highlight-color: transparent;
-      white-space: nowrap;
-    }
-
-    .submit-btn:active {
-      transform: scale(0.97);
-      background: var(--primary-dark);
-    }
-
-    .submit-btn:disabled {
-      background: var(--text-muted);
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* ============================== */
-    /* Loading & Result Screens        */
-    /* ============================== */
-    .loading-screen {
-      text-align: center;
-      padding: 80px 20px;
-    }
-
-    .spinner {
-      width: 48px;
-      height: 48px;
-      border: 4px solid var(--border);
-      border-top-color: var(--primary);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .result-screen {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    .result-icon {
-      font-size: 64px;
-      margin-bottom: 16px;
-    }
-
-    .result-screen h2 {
-      font-size: 22px;
-      margin-bottom: 8px;
-    }
-
-    .result-screen .order-number {
-      font-size: 14px;
-      color: var(--text-light);
-      margin-bottom: 20px;
-    }
-
-    .result-details {
-      background: var(--bg);
-      border-radius: var(--radius);
-      padding: 16px;
-      text-align: left;
-      margin: 16px 0;
-    }
-
-    .result-detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      font-size: 14px;
-    }
-
-    .result-detail-row.total {
-      border-top: 1.5px solid var(--border);
-      margin-top: 8px;
-      padding-top: 12px;
-      font-weight: 700;
-      font-size: 16px;
-    }
-
-    .result-note {
-      font-size: 13px;
-      color: var(--text-light);
-      margin-top: 16px;
-      line-height: 1.6;
-    }
-
-    /* Error */
-    .error-message {
-      background: var(--danger-bg);
-      color: var(--danger);
-      padding: 12px 16px;
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-weight: 500;
-      margin: 12px 0;
-      text-align: center;
-    }
-
-    /* ============================== */
-    /* Initial Loading                 */
-    /* ============================== */
-    .init-loading {
-      text-align: center;
-      padding: 100px 20px;
-    }
-
-    .init-loading p {
-      color: var(--text-light);
-      margin-top: 12px;
-      font-size: 14px;
-    }
+    /* Loading & Results */
+    .loading-screen { text-align: center; padding: 80px 20px; }
+    .spinner { width: 44px; height: 44px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .result-screen { text-align: center; padding: 50px 20px; }
+    .result-icon { font-size: 56px; margin-bottom: 12px; }
+    .result-screen h2 { font-size: 20px; margin-bottom: 6px; }
+    .result-details { background: var(--bg); border-radius: var(--radius); padding: 14px; text-align: left; margin: 14px 0; }
+    .result-detail-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; }
+    .result-detail-row.waitlist-row { color: var(--waitlist); }
+    .result-detail-row.total { border-top: 1.5px solid var(--border); margin-top: 6px; padding-top: 10px; font-weight: 700; font-size: 15px; }
+    .result-note { font-size: 12px; color: var(--text-light); margin-top: 14px; line-height: 1.6; }
+    .error-message { background: var(--danger-bg); color: var(--danger); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; margin: 10px 0; text-align: center; }
+    .init-loading { text-align: center; padding: 100px 20px; }
+    .init-loading p { color: var(--text-light); margin-top: 10px; font-size: 13px; }
   </style>
 </head>
 <body>
 
 <div class="app">
-  <!-- Header -->
   <div class="header">
     <h1>🍱 便當訂購</h1>
-    <div class="subtitle" id="headerDate"></div>
+    <div class="date" id="headerDate"></div>
     <div id="statusBadge"></div>
   </div>
 
-  <!-- Screen: Initial Loading -->
   <div class="screen active" id="screenLoading">
-    <div class="init-loading">
-      <div class="spinner"></div>
-      <p>正在載入菜單...</p>
-    </div>
+    <div class="init-loading"><div class="spinner"></div><p>正在載入菜單...</p></div>
   </div>
 
-  <!-- Screen: Closed -->
   <div class="screen" id="screenClosed">
-    <div class="closed-message">
-      <div class="icon">🔒</div>
-      <h2>目前未開放訂購</h2>
-      <p id="closedMsg">請等待店家開放訂購。</p>
-    </div>
+    <div class="closed-message"><div class="icon">🔒</div><h2>目前未開放訂購</h2><p id="closedMsg">請等待店家開放訂購。</p></div>
   </div>
 
-  <!-- Screen: Order Form -->
   <div class="screen" id="screenOrder">
-    <!-- Customer Info -->
-    <div class="section-title"><span class="icon">👤</span> 顧客資料</div>
+    <div class="section-title">👤 顧客資料</div>
     <div class="form-group">
-      <label for="customerName">姓名 *</label>
+      <label>姓名 *</label>
       <input type="text" id="customerName" placeholder="請輸入您的姓名" autocomplete="name">
     </div>
     <div class="form-group">
-      <label for="customerPhone">電話 *</label>
+      <label>電話 *</label>
       <input type="tel" id="customerPhone" placeholder="請輸入您的電話" autocomplete="tel">
     </div>
 
-    <!-- Menu -->
-    <div class="section-title"><span class="icon">📋</span> 今日菜單</div>
+    <div class="section-title">📋 今日菜單</div>
     <div class="menu-list" id="menuList"></div>
 
-    <!-- Note -->
-    <div class="section-title"><span class="icon">📝</span> 備註</div>
+    <div class="section-title">📝 備註</div>
     <div class="form-group">
-      <textarea id="orderNote" placeholder="特殊需求請寫在這裡（例如：不要香菜、飯少一點）"></textarea>
+      <textarea id="orderNote" placeholder="特殊需求（例如：不要香菜、飯少一點）" maxlength="100" oninput="updateCharCount()"></textarea>
+      <div class="char-count"><span id="charCount">0</span>/100</div>
     </div>
-
-    <!-- Error Message -->
     <div id="errorMessage" class="error-message" style="display:none;"></div>
   </div>
 
-  <!-- Screen: Submitting -->
   <div class="screen" id="screenSubmitting">
-    <div class="loading-screen">
-      <div class="spinner"></div>
-      <p>訂單送出中，請稍候...</p>
-      <p style="font-size:12px; color:var(--text-muted); margin-top:8px;">請勿關閉頁面或重複送出</p>
-    </div>
+    <div class="loading-screen"><div class="spinner"></div><p>訂單送出中，請稍候...</p><p style="font-size:11px;color:var(--text-muted);margin-top:6px;">請勿關閉頁面</p></div>
   </div>
 
-  <!-- Screen: Result -->
   <div class="screen" id="screenResult">
     <div class="result-screen" id="resultContent"></div>
   </div>
 </div>
 
-<!-- Order Footer -->
 <div class="order-footer" id="orderFooter" style="display:none;">
   <div class="order-footer-inner">
     <div class="order-summary-text">
       <span id="footerItemCount">0 項</span>
       <span class="total" id="footerTotal">$0</span>
+      <span class="waitlist-note" id="footerWaitNote" style="display:none;"></span>
     </div>
     <button class="submit-btn" id="submitBtn" disabled onclick="handleSubmit()">送出訂單</button>
   </div>
@@ -580,177 +182,229 @@
 
 <script>
   // ============================================================
-  // 設定：請將這裡換成你的 Apps Script Web App URL
+  // Supabase 設定
   // ============================================================
-  const API_URL = 'https://script.google.com/macros/s/AKfycbx6yfWBHmqgncCxkWLkfIzchuDpALo_MKSC1iYnH4ZUCluZnqNmNYQDQuiZiv4uDXY4GQ/exec';
+  const SUPABASE_URL = 'https://twfkifjowgcjwnljkemx.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3ZmtpZmpvd2djandubGprZW14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3OTA4MDIsImV4cCI6MjA4OTM2NjgwMn0.t8ub0gBNVlyRU6X4hVOwI2GGkrdrPHgJWj421DSve30';
+
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+
+  function sbGet(path) {
+    return fetch(SUPABASE_URL + '/rest/v1/' + path, { headers }).then(r => r.json());
+  }
+  function sbPost(path, body) {
+    return fetch(SUPABASE_URL + '/rest/v1/' + path, { method: 'POST', headers, body: JSON.stringify(body) }).then(r => r.json());
+  }
+  function sbRpc(fn, args) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, { method: 'POST', headers, body: JSON.stringify(args) }).then(r => r.json());
+  }
 
   // ============================================================
   // State
   // ============================================================
   let menuData = [];
-  let quantities = {};  // { itemName: qty }
+  let quantities = {};
+  let bizDate = '';
+  let soldCounts = {};
+  let waitCounts = {};
 
   // ============================================================
-  // Initialization
+  // Init
   // ============================================================
   document.addEventListener('DOMContentLoaded', function() {
-    // 顯示今日日期
     const today = new Date();
-    const dateStr = today.getFullYear() + '/' +
-      String(today.getMonth() + 1).padStart(2, '0') + '/' +
-      String(today.getDate()).padStart(2, '0');
-    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+    const dateStr = today.getFullYear() + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + String(today.getDate()).padStart(2,'0');
+    const weekdays = ['日','一','二','三','四','五','六'];
     document.getElementById('headerDate').textContent = dateStr + '（' + weekdays[today.getDay()] + '）';
-
     loadMenu();
   });
 
-  // ============================================================
-  // API Calls (使用 iframe + form POST 繞過 CORS)
-  // ============================================================
-
-  /**
-   * 透過隱藏 iframe 發送 GET 請求到 Apps Script
-   * Google Apps Script 的 doGet 會 302 redirect，
-   * 但 script tag / iframe 不受 CORS 限制。
-   * 這裡用 Google Apps Script 的 callback 包裝來解決。
-   */
-  function callAPI(params) {
-    return new Promise(function(resolve, reject) {
-      // 建立唯一的 callback 名稱
-      const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-
-      // 設定全域 callback
-      window[callbackName] = function(result) {
-        // 清理
-        clearTimeout(timeout);
-        delete window[callbackName];
-        const script = document.getElementById(callbackName);
-        if (script) script.remove();
-        resolve(result);
-      };
-
-      // 設定逾時
-      const timeout = setTimeout(function() {
-        if (window[callbackName]) {
-          delete window[callbackName];
-          const script = document.getElementById(callbackName);
-          if (script) script.remove();
-          reject(new Error('請求逾時'));
-        }
-      }, 30000);
-
-      // 組合 URL
-      const url = API_URL + '?callback=' + callbackName +
-        '&' + Object.keys(params).map(function(k) {
-          return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-        }).join('&');
-
-      // 建立 script tag
-      const script = document.createElement('script');
-      script.id = callbackName;
-      script.src = url;
-      script.onerror = function() {
-        clearTimeout(timeout);
-        delete window[callbackName];
-        script.remove();
-        reject(new Error('連線失敗'));
-      };
-      document.body.appendChild(script);
-    });
+  function updateCharCount() {
+    document.getElementById('charCount').textContent = document.getElementById('orderNote').value.length;
   }
 
+  // ============================================================
+  // Load Menu
+  // ============================================================
   async function loadMenu() {
     try {
-      const result = await callAPI({ action: 'getMenu' });
+      // 1. Check system status
+      const control = await sbGet('system_control?id=eq.1');
+      if (!control || control.length === 0) { showClosed('系統尚未設定。'); return; }
+      const sys = control[0];
 
-      if (!result.success) {
-        showScreen('screenClosed');
-        document.getElementById('closedMsg').textContent = result.message || '系統發生錯誤';
-        updateStatusBadge(false);
-        return;
+      if (!sys.is_open) { showClosed('目前未開放訂購，請等待店家開放。'); return; }
+
+      // Check auto close time
+      if (sys.auto_close_time && sys.biz_date) {
+        const now = new Date();
+        const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+        const closeTime = new Date(todayStr + 'T' + sys.auto_close_time);
+        if (now >= closeTime) { showClosed('今日訂購已截止。'); return; }
       }
 
-      if (!result.isOpen) {
-        showScreen('screenClosed');
-        document.getElementById('closedMsg').textContent = result.message;
-        updateStatusBadge(false);
-        return;
+      bizDate = sys.biz_date;
+
+      // 2. Load menu
+      const menu = await sbGet('menu_items?is_active=eq.true&order=sort_order.asc');
+
+      // 3. Get sold counts for each item
+      soldCounts = {};
+      waitCounts = {};
+      for (const item of menu) {
+        const sold = await sbRpc('get_sold_count', { p_biz_date: bizDate, p_item_name: item.name });
+        soldCounts[item.name] = sold || 0;
+        const wait = await sbRpc('get_waitlist_count', { p_biz_date: bizDate, p_item_name: item.name });
+        waitCounts[item.name] = wait || 0;
       }
 
-      menuData = result.menu;
+      menuData = menu.map(item => ({
+        name: item.name,
+        price: item.price,
+        total: item.daily_quota,
+        remaining: Math.max(0, item.daily_quota - (soldCounts[item.name] || 0)),
+        type: item.item_type,
+        perPersonLimit: item.per_person_limit || 0,
+        soldOut: item.daily_quota - (soldCounts[item.name] || 0) <= 0,
+        waitCount: waitCounts[item.name] || 0
+      }));
+
       updateStatusBadge(true);
       renderMenu();
       showScreen('screenOrder');
       document.getElementById('orderFooter').style.display = 'block';
 
     } catch (err) {
-      showScreen('screenClosed');
-      document.getElementById('closedMsg').textContent = '無法連線到系統，請稍後再試。';
-      updateStatusBadge(false);
+      console.error(err);
+      showClosed('無法連線到系統，請稍後再試。');
     }
   }
 
-  async function handleSubmit() {
-    // 立即禁用按鈕防止連點
-    document.getElementById('submitBtn').disabled = true;
+  function showClosed(msg) {
+    showScreen('screenClosed');
+    document.getElementById('closedMsg').textContent = msg;
+    updateStatusBadge(false);
+  }
 
+  // ============================================================
+  // Submit Order
+  // ============================================================
+  async function handleSubmit() {
+    document.getElementById('submitBtn').disabled = true;
     const name = document.getElementById('customerName').value.trim();
     const phone = document.getElementById('customerPhone').value.trim();
     const note = document.getElementById('orderNote').value.trim();
 
-    // Validation
-    if (!name) {
-      showError('請輸入姓名');
-      document.getElementById('submitBtn').disabled = false;
-      return;
-    }
-    if (!phone) {
-      showError('請輸入電話');
-      document.getElementById('submitBtn').disabled = false;
-      return;
-    }
-    if (!/^[+]?[0-9]{1}[0-9\-]{6,13}[0-9]$/.test(phone.replace(/\s/g, ''))) {
-      showError('請輸入有效的電話號碼');
-      document.getElementById('submitBtn').disabled = false;
-      return;
-    }
+    if (!name) { showError('請輸入姓名'); document.getElementById('submitBtn').disabled = false; return; }
+    if (!phone) { showError('請輸入電話'); document.getElementById('submitBtn').disabled = false; return; }
+    if (!/^[+]?[0-9]{1}[0-9\-]{6,13}[0-9]$/.test(phone.replace(/\s/g,''))) { showError('請輸入有效的電話號碼'); document.getElementById('submitBtn').disabled = false; return; }
 
     const items = [];
     for (const itemName in quantities) {
-      if (quantities[itemName] > 0) {
-        items.push({ name: itemName, qty: quantities[itemName] });
-      }
+      if (quantities[itemName] > 0) items.push({ name: itemName, qty: quantities[itemName] });
     }
-
-    if (items.length === 0) {
-      showError('請至少選擇一項便當');
-      document.getElementById('submitBtn').disabled = false;
-      return;
-    }
+    if (items.length === 0) { showError('請至少選擇一項便當'); document.getElementById('submitBtn').disabled = false; return; }
 
     hideError();
     showScreen('screenSubmitting');
     document.getElementById('orderFooter').style.display = 'none';
 
     try {
-      const result = await callAPI({
-        action: 'submitOrder',
-        data: JSON.stringify({
-          customerName: name,
-          customerPhone: phone.replace(/\s/g, ''),
-          items: items,
-          note: note
-        })
-      });
-
-      if (result.success) {
-        showOrderResult(true, result);
-      } else {
-        showOrderResult(false, result);
+      // Check duplicate order
+      const existing = await sbGet('orders?customer_phone=eq.' + encodeURIComponent(phone.replace(/\s/g,'')) + '&biz_date=eq.' + bizDate + '&status=neq.棄單');
+      if (existing && existing.length > 0) {
+        showOrderResult(false, { message: '您今天已經下過單了！如需修改請聯繫店家。' });
+        return;
       }
 
+      // Generate order number
+      const orderNumber = await sbRpc('generate_order_number', { p_biz_date: bizDate });
+
+      // Classify each item as confirmed or waitlisted
+      const orderItems = [];
+      let confirmedTotal = 0;
+      let hasWaitlist = false;
+
+      // Re-fetch sold counts to prevent overselling
+      for (const item of items) {
+        const freshSold = await sbRpc('get_sold_count', { p_biz_date: bizDate, p_item_name: item.name });
+        const menuItem = menuData.find(m => m.name === item.name);
+        if (!menuItem) { showOrderResult(false, { message: '品項「' + item.name + '」不存在。' }); return; }
+
+        const remaining = menuItem.total - (freshSold || 0);
+
+        if (item.qty <= remaining) {
+          // Fully confirmed
+          orderItems.push({ name: item.name, qty: item.qty, price: menuItem.price, subtotal: item.qty * menuItem.price, status: '成立', waitPosition: 0 });
+          confirmedTotal += item.qty * menuItem.price;
+        } else if (remaining > 0) {
+          // Partially: some confirmed, rest waitlisted
+          const confirmedQty = remaining;
+          const waitQty = item.qty - remaining;
+          orderItems.push({ name: item.name, qty: confirmedQty, price: menuItem.price, subtotal: confirmedQty * menuItem.price, status: '成立', waitPosition: 0 });
+          confirmedTotal += confirmedQty * menuItem.price;
+
+          const currentWait = await sbRpc('get_waitlist_count', { p_biz_date: bizDate, p_item_name: item.name });
+          orderItems.push({ name: item.name, qty: waitQty, price: menuItem.price, subtotal: waitQty * menuItem.price, status: '候補', waitPosition: (currentWait || 0) + 1 });
+          hasWaitlist = true;
+        } else {
+          // Fully waitlisted
+          const currentWait = await sbRpc('get_waitlist_count', { p_biz_date: bizDate, p_item_name: item.name });
+          orderItems.push({ name: item.name, qty: item.qty, price: menuItem.price, subtotal: item.qty * menuItem.price, status: '候補', waitPosition: (currentWait || 0) + 1 });
+          hasWaitlist = true;
+        }
+      }
+
+      // Determine order status
+      const allWaitlist = orderItems.every(i => i.status === '候補');
+      const orderStatus = allWaitlist ? '候補' : (hasWaitlist ? '部分候補' : '成立');
+
+      // Insert order
+      const orderResult = await sbPost('orders', {
+        order_number: orderNumber,
+        customer_name: name,
+        customer_phone: phone.replace(/\s/g,''),
+        biz_date: bizDate,
+        status: orderStatus,
+        total_amount: confirmedTotal,
+        note: note
+      });
+
+      if (!orderResult || orderResult.length === 0 || orderResult.error) {
+        showOrderResult(false, { message: '訂單送出失敗，請稍後再試。' });
+        return;
+      }
+
+      const orderId = orderResult[0].id;
+
+      // Insert order items
+      const itemRows = orderItems.map(item => ({
+        order_id: orderId,
+        item_name: item.name,
+        qty: item.qty,
+        price: item.price,
+        subtotal: item.subtotal,
+        item_status: item.status,
+        wait_position: item.waitPosition
+      }));
+
+      await sbPost('order_items', itemRows);
+
+      // Show result
+      showOrderResult(true, {
+        orderNumber: orderNumber,
+        totalAmount: confirmedTotal,
+        items: orderItems,
+        status: orderStatus
+      });
+
     } catch (err) {
+      console.error(err);
       showOrderResult(false, { message: '網路連線失敗，請稍後再試。' });
     }
   }
@@ -758,12 +412,7 @@
   // ============================================================
   // Rendering
   // ============================================================
-  // HTML escape 防止 XSS
-  function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
+  function escapeHTML(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
   function renderMenu() {
     const container = document.getElementById('menuList');
@@ -775,46 +424,43 @@
       const isLow = !isSoldOut && item.remaining <= 5;
 
       const div = document.createElement('div');
-      div.className = 'menu-item' + (isSoldOut ? ' sold-out' : '');
+      div.className = 'menu-item' + (isSoldOut ? ' sold-out-item' : '');
       div.setAttribute('data-name', item.name);
 
       let badgeHTML = '';
+      if (isLimited) badgeHTML += '<span class="badge limited">限量</span>';
+      if (isSoldOut) badgeHTML += '<span class="badge waitlist-badge">可候補</span>';
+
+      let remainText = '';
       if (isSoldOut) {
-        badgeHTML = '<span class="badge sold-out-badge">已售完</span>';
-      } else if (isLimited) {
-        badgeHTML = '<span class="badge limited">限量</span>';
+        remainText = '<span class="remaining out">已售完' + (item.waitCount > 0 ? '・' + item.waitCount + '人候補中' : '・可排隊候補') + '</span>';
+      } else {
+        remainText = '<span class="remaining ' + (isLow ? 'low' : '') + '">剩餘 ' + item.remaining + ' 份</span>';
       }
 
       let limitText = '';
-      if (item.perPersonLimit > 0 && !isSoldOut) {
+      if (item.perPersonLimit > 0) {
         limitText = '<div class="per-person-limit">每人限購 ' + item.perPersonLimit + ' 個</div>';
       }
 
       div.innerHTML = `
         <div class="menu-item-header">
           <div class="menu-item-name">${escapeHTML(item.name)} ${badgeHTML}</div>
-          <div class="menu-item-price">$${escapeHTML(String(item.price))}</div>
+          <div class="menu-item-price">$${item.price}</div>
         </div>
         <div class="menu-item-info">
-          <span class="remaining ${isLow ? 'low' : ''}">
-            ${isSoldOut ? '已售完' : '剩餘 ' + item.remaining + ' 份'}
-          </span>
-          ${isSoldOut ? '' : `
-            <div class="qty-selector">
-              <button class="qty-btn" onclick="changeQty('${escapeHTML(item.name).replace(/'/g, "\\'")}', -1)" data-minus="${escapeHTML(item.name)}">−</button>
-              <span class="qty-value" id="qty-${CSS.escape(item.name)}">${quantities[item.name] || 0}</span>
-              <button class="qty-btn" onclick="changeQty('${escapeHTML(item.name).replace(/'/g, "\\'")}', 1)" data-plus="${escapeHTML(item.name)}">+</button>
-            </div>
-          `}
+          ${remainText}
+          <div class="qty-selector">
+            <button class="qty-btn" onclick="changeQty('${escapeHTML(item.name).replace(/'/g,"\\'")}', -1)" data-minus="${escapeHTML(item.name)}">−</button>
+            <span class="qty-value" id="qty-${CSS.escape(item.name)}">${quantities[item.name] || 0}</span>
+            <button class="qty-btn" onclick="changeQty('${escapeHTML(item.name).replace(/'/g,"\\'")}', 1)" data-plus="${escapeHTML(item.name)}">+</button>
+          </div>
         </div>
         ${limitText}
       `;
 
       container.appendChild(div);
-
-      if (!isSoldOut) {
-        quantities[item.name] = quantities[item.name] || 0;
-      }
+      quantities[item.name] = quantities[item.name] || 0;
     });
 
     updateFooter();
@@ -824,29 +470,29 @@
   function changeQty(name, delta) {
     const item = menuData.find(i => i.name === name);
     if (!item) return;
-
     const current = quantities[name] || 0;
     let newQty = current + delta;
-
-    // Clamp
     if (newQty < 0) newQty = 0;
-    if (newQty > item.remaining) newQty = item.remaining;
-    if (item.perPersonLimit > 0 && newQty > item.perPersonLimit) newQty = item.perPersonLimit;
+
+    // For sold out items, allow up to perPersonLimit (or 1 for waitlist)
+    const maxForItem = item.soldOut
+      ? (item.perPersonLimit > 0 ? item.perPersonLimit : 5)
+      : (item.perPersonLimit > 0 ? Math.min(item.remaining, item.perPersonLimit) : item.remaining);
+
+    if (newQty > maxForItem) newQty = maxForItem;
 
     quantities[name] = newQty;
 
-    // Update display
     const qtyEl = document.getElementById('qty-' + CSS.escape(name));
     if (qtyEl) {
       qtyEl.textContent = newQty;
-      qtyEl.className = 'qty-value' + (newQty > 0 ? ' has-value' : '');
+      qtyEl.className = 'qty-value' + (newQty > 0 ? (item.soldOut ? ' waitlist-value' : ' has-value') : '');
     }
 
-    // Update card style
-    const cards = document.querySelectorAll('.menu-item');
-    cards.forEach(function(card) {
+    document.querySelectorAll('.menu-item').forEach(function(card) {
       if (card.getAttribute('data-name') === name) {
-        card.classList.toggle('selected', newQty > 0);
+        card.classList.remove('selected', 'waitlisted');
+        if (newQty > 0) card.classList.add(item.soldOut ? 'waitlisted' : 'selected');
       }
     });
 
@@ -856,37 +502,51 @@
 
   function updateQtyButtons() {
     menuData.forEach(function(item) {
-      if (item.soldOut) return;
       const qty = quantities[item.name] || 0;
-      const maxQty = item.perPersonLimit > 0
-        ? Math.min(item.remaining, item.perPersonLimit)
-        : item.remaining;
+      const maxQty = item.soldOut
+        ? (item.perPersonLimit > 0 ? item.perPersonLimit : 5)
+        : (item.perPersonLimit > 0 ? Math.min(item.remaining, item.perPersonLimit) : item.remaining);
 
       const minusBtn = document.querySelector(`[data-minus="${item.name}"]`);
       const plusBtn = document.querySelector(`[data-plus="${item.name}"]`);
-
       if (minusBtn) minusBtn.disabled = qty <= 0;
       if (plusBtn) plusBtn.disabled = qty >= maxQty;
     });
   }
 
   function updateFooter() {
-    let totalItems = 0;
-    let totalAmount = 0;
-
+    let totalItems = 0, totalAmount = 0, hasWaitlist = false;
     for (const name in quantities) {
       if (quantities[name] > 0) {
         const item = menuData.find(i => i.name === name);
         if (item) {
           totalItems += quantities[name];
-          totalAmount += quantities[name] * item.price;
+          if (item.soldOut) {
+            hasWaitlist = true;
+          } else {
+            const confirmedQty = Math.min(quantities[name], item.remaining);
+            totalAmount += confirmedQty * item.price;
+            if (quantities[name] > item.remaining) hasWaitlist = true;
+          }
         }
       }
     }
 
     document.getElementById('footerItemCount').textContent = totalItems + ' 項';
     document.getElementById('footerTotal').textContent = '$' + totalAmount;
-    document.getElementById('submitBtn').disabled = totalItems === 0;
+
+    const waitNote = document.getElementById('footerWaitNote');
+    if (hasWaitlist) {
+      waitNote.textContent = '含候補品項（候補不計費）';
+      waitNote.style.display = 'block';
+    } else {
+      waitNote.style.display = 'none';
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = totalItems === 0;
+    btn.textContent = hasWaitlist ? '送出訂單（含候補）' : '送出訂單';
+    btn.className = 'submit-btn' + (hasWaitlist ? ' has-waitlist' : '');
   }
 
   function showOrderResult(success, result) {
@@ -895,76 +555,54 @@
     if (success) {
       let itemsHTML = '';
       result.items.forEach(function(item) {
+        const isWait = item.status === '候補';
         itemsHTML += `
-          <div class="result-detail-row">
-            <span>${escapeHTML(item.name)} x${item.qty}</span>
-            <span>$${item.subtotal}</span>
-          </div>
-        `;
+          <div class="result-detail-row ${isWait ? 'waitlist-row' : ''}">
+            <span>${escapeHTML(item.name)} x${item.qty} ${isWait ? '⏳候補第' + item.waitPosition + '位' : '✅'}</span>
+            <span>${isWait ? '（候補不計費）' : '$' + item.subtotal}</span>
+          </div>`;
       });
 
+      let statusText = '';
+      if (result.status === '候補') statusText = '<p style="color:var(--waitlist);font-size:13px;margin-bottom:12px;">您的所有品項目前為候補狀態，有空位時店家會通知您。</p>';
+      else if (result.status === '部分候補') statusText = '<p style="color:var(--waitlist);font-size:13px;margin-bottom:12px;">部分品項為候補中，確認的品項請準時取餐。</p>';
+
       container.innerHTML = `
-        <div class="result-icon">✅</div>
-        <h2>訂單成立！</h2>
-        <div class="order-number">訂單編號：${escapeHTML(result.orderNumber)}</div>
+        <div class="result-icon">${result.status === '候補' ? '⏳' : '✅'}</div>
+        <h2>${result.status === '候補' ? '已加入候補！' : '訂單成立！'}</h2>
+        <div style="font-size:13px;color:var(--text-light);margin-bottom:4px;">訂單編號：${escapeHTML(result.orderNumber)}</div>
+        ${statusText}
         <div class="result-details">
           ${itemsHTML}
-          <div class="result-detail-row total">
-            <span>合計</span>
-            <span>$${result.totalAmount}</span>
-          </div>
+          <div class="result-detail-row total"><span>確認金額</span><span>$${result.totalAmount}</span></div>
         </div>
-        <div class="result-note">
-          請於取餐時間至攤位報上姓名取餐。<br>
-          如需取消訂單，請直接聯繫店家。
-        </div>
-      `;
+        <div class="result-note">確認的品項請於取餐時間至攤位報上姓名取餐。<br>如需取消訂單，請直接聯繫店家。</div>`;
     } else {
       container.innerHTML = `
         <div class="result-icon">❌</div>
         <h2>訂單失敗</h2>
-        <p style="color:var(--text-light); margin-bottom:20px;">${escapeHTML(result.message)}</p>
-        <button class="submit-btn" onclick="location.reload()" style="display:inline-block;">
-          重新訂購
-        </button>
-      `;
+        <p style="color:var(--text-light);margin-bottom:16px;">${escapeHTML(result.message)}</p>
+        <button class="submit-btn" onclick="location.reload()" style="display:inline-block;">重新訂購</button>`;
     }
-
     showScreen('screenResult');
   }
 
   // ============================================================
   // Helpers
   // ============================================================
-  function showScreen(screenId) {
+  function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screenId).classList.add('active');
-
-    if (screenId !== 'screenOrder') {
-      document.getElementById('orderFooter').style.display = 'none';
-    }
+    document.getElementById(id).classList.add('active');
+    if (id !== 'screenOrder') document.getElementById('orderFooter').style.display = 'none';
   }
-
   function updateStatusBadge(isOpen) {
     const el = document.getElementById('statusBadge');
-    if (isOpen) {
-      el.innerHTML = '<div class="status-badge open"><span class="dot"></span>接單中</div>';
-    } else {
-      el.innerHTML = '<div class="status-badge closed"><span class="dot" style="animation:none;"></span>未開放</div>';
-    }
+    el.innerHTML = isOpen
+      ? '<div class="status-badge open"><span class="dot"></span>接單中</div>'
+      : '<div class="status-badge closed"><span class="dot" style="animation:none"></span>未開放</div>';
   }
-
-  function showError(msg) {
-    const el = document.getElementById('errorMessage');
-    el.textContent = msg;
-    el.style.display = 'block';
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  function hideError() {
-    document.getElementById('errorMessage').style.display = 'none';
-  }
+  function showError(msg) { const el = document.getElementById('errorMessage'); el.textContent = msg; el.style.display = 'block'; el.scrollIntoView({behavior:'smooth',block:'center'}); }
+  function hideError() { document.getElementById('errorMessage').style.display = 'none'; }
 </script>
-
 </body>
 </html>
